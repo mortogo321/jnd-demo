@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # MySQL for Testing
+  mysql:
+    image: mysql:8.0
+    container_name: urlshortener-mysql-test
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-url_shortener_test}
+      MYSQL_USER: ${MYSQL_USER:-urlshortener}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql_test_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - urlshortener
+
+  # Laravel API (Testing)
+  server:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+      target: development
+    container_name: urlshortener-server-test
+    volumes:
+      - ../server:/var/www/html
+      - /var/www/html/vendor
+    environment:
+      - APP_ENV=${APP_ENV:-testing}
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${MYSQL_DATABASE:-url_shortener_test}
+      - DB_USERNAME=${MYSQL_USER:-urlshortener}
+      - DB_PASSWORD=${MYSQL_PASSWORD:-secret}
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - urlshortener
+
+  # Nginx for Laravel
+  nginx:
+    image: nginx:alpine
+    container_name: urlshortener-nginx-test
+    ports:
+      - "${NGINX_PORT:-8001}:80"
+    volumes:
+      - ../server:/var/www/html
+      - ./nginx/laravel.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - server
+    networks:
+      - urlshortener
+
+  # Vue Frontend (Testing build)
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_BASE_URL: ${API_URL:-http://localhost:8001}
+        VITE_APP_URL: ${FRONTEND_URL:-http://localhost:8080}
+    container_name: urlshortener-web-test
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    networks:
+      - urlshortener
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: urlshortener-redis-test
+    ports:
+      - "${REDIS_PORT_EXPOSED:-6380}:6379"
+    volumes:
+      - redis_test_data:/data
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass "$REDIS_PASSWORD"}
+    networks:
+      - urlshortener
+
+networks:
+  urlshortener:
+    driver: bridge
+
+volumes:
+  mysql_test_data:
+  redis_test_data:
