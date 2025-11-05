@@ -353,12 +353,6 @@ User clicks → API (/{code})
           → Log click (async)
 ```
 
-### Database Schema
-
-**users**: id, name, email, password, is_admin, timestamps
-**shortened_urls**: id, user_id (FK), original_url, short_code (unique, indexed), clicks, timestamps
-**url_clicks**: id, shortened_url_id (FK), ip_address, user_agent, referer, created_at
-
 ### Performance
 
 | Operation           | Response Time | Throughput    |
