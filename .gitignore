@@ -2,11 +2,10 @@
 node_modules/
 vendor/
 
-# Environment
-.env
-.env.local
-.env.*.local
+# Environment - Only ignore production env files with sensitive data
 .env.production
+.env.local
+*.env.local
 
 # Build outputs
 dist/

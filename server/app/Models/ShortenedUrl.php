@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,6 +25,13 @@ class ShortenedUrl extends Model
     ];
 
     /**
+     * Get the attributes that should be appended to the model's array form.
+     *
+     * @var list<string>
+     */
+    protected $appends = ['short_url'];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -35,6 +43,16 @@ class ShortenedUrl extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the full shortened URL.
+     */
+    protected function shortUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => config('app.url').'/'.$this->short_code,
+        );
     }
 
     /**

@@ -42,6 +42,9 @@ jnd-demo/
 │   ├── database/migrations/       # Database migrations
 │   ├── routes/api.php             # API routes
 │   ├── Dockerfile                 # Multi-stage Docker
+│   ├── .env.development           # Dev environment
+│   ├── .env.testing               # Test environment
+│   ├── .env.production            # Prod environment (gitignored)
 │   └── pint.json                  # Code formatting
 │
 ├── web/                 # Vue Frontend
@@ -52,6 +55,9 @@ jnd-demo/
 │   │   ├── types/       # TypeScript types
 │   │   └── views/       # Page components
 │   ├── Dockerfile       # Multi-stage Docker
+│   ├── .env.development           # Dev environment
+│   ├── .env.testing               # Test environment
+│   ├── .env.production            # Prod environment (gitignored)
 │   └── tailwind.config.js
 │
 ├── docker/              # Docker & DevOps
@@ -59,10 +65,6 @@ jnd-demo/
 │   ├── compose.testing.yml      # Testing
 │   ├── compose.production.yml   # Production
 │   └── nginx/           # Nginx configs
-│
-├── .env.development     # Dev environment variables
-├── .env.testing         # Test environment variables
-└── .env.production.example  # Production env template
 │
 ├── package.json         # Root workspace
 └── pnpm-workspace.yaml
@@ -79,32 +81,29 @@ jnd-demo/
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/mortogo321/jnd-demo.git
    cd jnd-demo
    ```
 
 2. **Environment files are pre-configured**
-   - `.env.development` - Development environment (already configured)
-   - `.env.testing` - Testing environment (already configured)
-   - For local Laravel/Vue setup: Copy `server/.env.example` and `web/.env.example`
+   - Each project has its own `.env` files:
+     - `server/.env.development` and `web/.env.development` (committed, safe defaults)
+     - `server/.env.testing` and `web/.env.testing` (committed, safe defaults)
+     - `server/.env.production` and `web/.env.production` (gitignored, copy from `.example`)
 
 3. **Start with Docker**
    ```bash
    cd docker
-   docker-compose --env-file ../.env.development -f compose.development.yml up -d
+   docker compose -f compose.development.yml up -d
    ```
 
-4. **Initialize database** (first time only)
-   ```bash
-   # Create SQLite database file
-   docker exec -it urlshortener-server-dev touch database/database.sqlite
+   The application will automatically:
+   - Generate `APP_KEY` if not set
+   - Run database migrations (upsert)
+   - Seed the database (dev/test environments only)
+   - Create SQLite database file if needed
 
-   # Run migrations and seeders
-   docker exec -it urlshortener-server-dev php artisan migrate --seed
-   docker exec -it urlshortener-server-dev php artisan key:generate
-   ```
-
-5. **Access the application**
+4. **Access the application**
    - Frontend: http://localhost:5173
    - API: http://localhost:8000
    - API Docs: http://localhost:8000/api/documentation
@@ -113,7 +112,7 @@ jnd-demo/
 
 ```bash
 cd docker
-docker-compose -f compose.development.yml down
+docker compose -f compose.development.yml down
 ```
 
 ## 📚 API Endpoints
@@ -173,92 +172,100 @@ cd web && pnpm test
 
 ## 🏃 Running Environments
 
-All docker-compose files read from environment files in the project root.
+Environment files are stored in each project directory (`server/.env.*` and `web/.env.*`). Docker Compose builds use these files via the `ENV_FILE` build argument.
 
 ### Development Environment
 
-Uses SQLite for zero-config database setup.
+Uses SQLite for zero-config database setup. Redis with password protection. **Migrations and seeders run automatically on container start.**
 
 ```bash
 cd docker
-docker-compose --env-file ../.env.development -f compose.development.yml up -d
+docker compose -f compose.development.yml up -d
 ```
 
 **Services:**
 - Vue Frontend: http://localhost:5173
 - Laravel API: http://localhost:8000
-- Redis: localhost:6379
+- Redis: localhost:6379 (password: `dev_redis_password`)
+
+**Note:** The entrypoint script automatically runs migrations and seeders on startup, so no manual database initialization is needed.
 
 ### Testing Environment
 
-Uses MySQL for realistic testing scenarios.
+Uses MySQL for realistic testing scenarios. All services use testing configuration. **Migrations and seeders run automatically on container start.**
 
 ```bash
 cd docker
-docker-compose --env-file ../.env.testing -f compose.testing.yml up -d
-
-# Initialize database
-docker exec -it urlshortener-server-test php artisan migrate --seed
-docker exec -it urlshortener-server-test php artisan key:generate
+docker compose -f compose.testing.yml up -d
 
 # Run tests
-docker exec -it urlshortener-server-test php artisan test
+docker compose exec server php artisan test
 ```
 
 **Services:**
 - Vue Frontend: http://localhost:8080
 - Laravel API: http://localhost:8001
-- MySQL: localhost:3307
-- Redis: localhost:6380
+- MySQL: localhost:3307 (password: `test_password`)
+- Redis: localhost:6380 (password: `test_redis_password`)
+
+**Note:** The entrypoint script automatically waits for MySQL, generates APP_KEY, runs migrations, and seeds the database on startup.
 
 ### Production Environment
 
-Full production stack with MySQL and Redis.
+Full production stack with MySQL and Redis. **Important**: Update passwords in `server/.env.production` and `web/.env.production` before deploying! **Migrations run automatically on container start** (no seeders in production).
 
 ```bash
-# 1. Create production environment file
-cp .env.production.example .env.production
+# 1. Copy and edit production environment files
+cp server/.env.production.example server/.env.production
+cp web/.env.production.example web/.env.production
+nano server/.env.production  # Update passwords and domains
+nano web/.env.production      # Update API URLs
 
-# 2. Edit with your secure values
-nano .env.production
-
-# 3. Deploy
+# 2. Deploy
 cd docker
-docker-compose --env-file ../.env.production -f compose.production.yml up -d --build
-
-# 4. Initialize
-docker exec -it urlshortener-server-prod php artisan migrate --force
+docker compose -f compose.production.yml up -d --build
 ```
+
+**Note:** The entrypoint script automatically:
+- Waits for MySQL connection
+- Generates APP_KEY if not set
+- Runs database migrations
+- Caches config, routes, and views for optimal performance
 
 ## 🐳 Docker Environment Variables
 
-Edit environment files (`.env.development`, `.env.testing`, `.env.production`) to customize:
+Each environment has its own `.env` files in `server/` and `web/` directories:
 
-**Application**: `APP_ENV`, `APP_DEBUG`, `APP_KEY`
-**MySQL**: `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_PORT`
-**Redis**: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_PORT_EXPOSED`
-**Ports**: `NGINX_PORT`, `NGINX_HTTPS_PORT`, `WEB_PORT`
-**URLs**: `API_URL`, `FRONTEND_URL`, `VITE_API_BASE_URL`, `VITE_APP_URL`
+**Server Environment Variables** (`server/.env.*`):
+- `APP_ENV`, `APP_DEBUG`, `APP_KEY`, `APP_URL`
+- `DB_CONNECTION`, `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
+- `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`
+- `SANCTUM_STATEFUL_DOMAINS`, `FRONTEND_URL`
+
+**Web Environment Variables** (`web/.env.*`):
+- `VITE_API_BASE_URL` - Backend API URL
+- `VITE_APP_URL` - Frontend application URL
 
 ## 🔧 Docker Commands
 
 ```bash
 # View logs
-docker-compose -f compose.development.yml logs -f
+docker compose -f compose.development.yml logs -f
 
-# Execute commands
-docker exec -it urlshortener-server-dev php artisan migrate
-docker exec -it urlshortener-server-dev vendor/bin/pint
+# Execute commands (no container names, use service names)
+docker compose exec server php artisan migrate
+docker compose exec server vendor/bin/pint
 
 # Access database/redis
-docker exec -it urlshortener-mysql-test mysql -u urlshortener -p
-docker exec -it urlshortener-redis-dev redis-cli
+docker compose exec mysql mysql -u urlshortener -p
+docker compose exec redis redis-cli -a dev_redis_password
 
 # Rebuild
-docker-compose -f compose.development.yml build --no-cache
+docker compose -f compose.development.yml build --no-cache
 
 # Clean up
-docker-compose -f compose.development.yml down -v
+docker compose -f compose.development.yml down -v
 ```
 
 ## ⚡ Performance Optimizations

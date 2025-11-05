@@ -15,6 +15,32 @@ class AuthController extends Controller
 {
     /**
      * Register a new user.
+     *
+     * @OA\Post(
+     *     path="/api/register",
+     *     summary="Register a new user",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","email","password","password_confirmation"},
+     *             @OA\Property(property="name", type="string", example="John Doe"),
+     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Registration successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="user", type="object"),
+     *             @OA\Property(property="token", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
      */
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -36,6 +62,30 @@ class AuthController extends Controller
 
     /**
      * Login an existing user.
+     *
+     * @OA\Post(
+     *     path="/api/login",
+     *     summary="Login user",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email","password"},
+     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Login successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="user", type="object"),
+     *             @OA\Property(property="token", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Invalid credentials")
+     * )
      */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -46,6 +96,9 @@ class AuthController extends Controller
                 'message' => 'Invalid credentials',
             ], 401);
         }
+
+        // Regenerate session to prevent session fixation attacks
+        $request->session()->regenerate();
 
         $user = Auth::user();
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -59,6 +112,20 @@ class AuthController extends Controller
 
     /**
      * Logout the authenticated user.
+     *
+     * @OA\Post(
+     *     path="/api/logout",
+     *     summary="Logout user",
+     *     tags={"Authentication"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Logout successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
      */
     public function logout(Request $request): JsonResponse
     {
@@ -71,6 +138,20 @@ class AuthController extends Controller
 
     /**
      * Get the authenticated user's information.
+     *
+     * @OA\Get(
+     *     path="/api/user",
+     *     summary="Get authenticated user",
+     *     tags={"Authentication"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="User information",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="user", type="object")
+     *         )
+     *     )
+     * )
      */
     public function user(Request $request): JsonResponse
     {

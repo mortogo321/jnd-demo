@@ -1,75 +1,97 @@
 <template>
-  <div class="admin">
-    <div class="container">
-      <div class="admin-header">
-        <h1>Admin Panel</h1>
-        <p>Manage all shortened URLs</p>
+  <div class="min-h-screen py-8">
+    <div class="max-w-[1200px] mx-auto px-4">
+      <div class="mb-8">
+        <h1 class="text-4xl font-bold mb-2">Admin Panel</h1>
+        <p class="text-muted-foreground">Manage all shortened URLs</p>
       </div>
 
-      <div class="admin-stats">
-        <div class="stat-card">
-          <h3>Total URLs</h3>
-          <p class="stat-number">{{ urlStore.pagination.total }}</p>
-        </div>
-        <div class="stat-card">
-          <h3>Current Page</h3>
-          <p class="stat-number">{{ urlStore.pagination.currentPage }} / {{ urlStore.pagination.lastPage }}</p>
-        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <Card>
+          <CardContent class="pt-6 text-center">
+            <h3 class="text-sm font-medium text-muted-foreground uppercase mb-2">Total URLs</h3>
+            <p class="text-3xl font-bold text-primary">{{ urlStore.pagination.total }}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent class="pt-6 text-center">
+            <h3 class="text-sm font-medium text-muted-foreground uppercase mb-2">Current Page</h3>
+            <p class="text-3xl font-bold text-primary">{{ urlStore.pagination.currentPage }} / {{ urlStore.pagination.lastPage }}</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div class="admin-content">
-        <div v-if="urlStore.loading" class="loading">Loading...</div>
-
-        <div v-else-if="urlStore.adminUrls.length === 0" class="empty-state">
-          <p>No URLs found in the system.</p>
-        </div>
-
-        <div v-else class="url-items">
-          <div v-for="url in urlStore.adminUrls" :key="url.id" class="url-item">
-            <div class="url-info">
-              <div class="url-id">
-                <strong>ID:</strong> {{ url.id }}
-              </div>
-              <div class="url-original">
-                <strong>Original:</strong>
-                <a :href="url.original_url" target="_blank" rel="noopener">{{ url.original_url }}</a>
-              </div>
-              <div class="url-short">
-                <strong>Short URL:</strong>
-                <a :href="getShortUrl(url.short_code)" target="_blank">{{ getShortUrl(url.short_code) }}</a>
-              </div>
-              <div class="url-meta">
-                <span class="clicks">Clicks: {{ url.clicks }}</span>
-                <span class="date">Created: {{ formatDate(url.created_at) }}</span>
-              </div>
-            </div>
-
-            <div class="url-actions">
-              <button @click="deleteUrl(url.id)" class="btn btn-small btn-danger">Delete</button>
-            </div>
+      <Card>
+        <CardContent class="p-6">
+          <div v-if="urlStore.loading" class="text-center py-8 text-muted-foreground">
+            Loading...
           </div>
-        </div>
 
-        <div v-if="urlStore.pagination.lastPage > 1" class="pagination">
-          <button
-            @click="changePage(urlStore.pagination.currentPage - 1)"
-            :disabled="urlStore.pagination.currentPage === 1"
-            class="btn btn-secondary"
-          >
-            Previous
-          </button>
-          <span class="page-info">
-            Page {{ urlStore.pagination.currentPage }} of {{ urlStore.pagination.lastPage }}
-          </span>
-          <button
-            @click="changePage(urlStore.pagination.currentPage + 1)"
-            :disabled="urlStore.pagination.currentPage === urlStore.pagination.lastPage"
-            class="btn btn-secondary"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+          <div v-else-if="urlStore.adminUrls.length === 0" class="text-center py-8">
+            <p class="text-muted-foreground">No URLs found in the system.</p>
+          </div>
+
+          <div v-else class="space-y-4">
+            <Card v-for="url in urlStore.adminUrls" :key="url.id" class="border-2 hover:border-primary/50 transition-colors">
+              <CardContent class="p-4">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                  <div class="flex-1 space-y-2">
+                    <div class="text-sm">
+                      <strong class="text-foreground inline-block w-20">ID:</strong>
+                      <span class="text-muted-foreground">{{ url.id }}</span>
+                    </div>
+                    <div class="text-sm">
+                      <strong class="text-foreground inline-block w-20">Original:</strong>
+                      <a :href="url.original_url" target="_blank" rel="noopener" class="text-primary hover:underline break-all">
+                        {{ url.original_url }}
+                      </a>
+                    </div>
+                    <div class="text-sm">
+                      <strong class="text-foreground inline-block w-20">Short URL:</strong>
+                      <a :href="getShortUrl(url.short_code)" target="_blank" class="text-primary hover:underline break-all">
+                        {{ getShortUrl(url.short_code) }}
+                      </a>
+                    </div>
+                    <div class="flex gap-4 text-xs text-muted-foreground mt-2">
+                      <span class="font-semibold text-green-600">Clicks: {{ url.clicks }}</span>
+                      <span>Created: {{ formatDate(url.created_at) }}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Button @click="deleteUrl(url.id)" variant="destructive" size="sm">
+                      <Trash2 class="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div v-if="urlStore.pagination.lastPage > 1" class="mt-8 flex justify-center items-center gap-4">
+            <Button
+              @click="changePage(urlStore.pagination.currentPage - 1)"
+              :disabled="urlStore.pagination.currentPage === 1"
+              variant="secondary"
+              size="sm"
+            >
+              Previous
+            </Button>
+            <span class="text-sm text-muted-foreground">
+              Page {{ urlStore.pagination.currentPage }} of {{ urlStore.pagination.lastPage }}
+            </span>
+            <Button
+              @click="changePage(urlStore.pagination.currentPage + 1)"
+              :disabled="urlStore.pagination.currentPage === urlStore.pagination.lastPage"
+              variant="secondary"
+              size="sm"
+            >
+              Next
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   </div>
 </template>
@@ -77,6 +99,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useUrlStore } from '@/stores/urlStore'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Trash2 } from 'lucide-vue-next'
 
 const urlStore = useUrlStore()
 
@@ -114,190 +139,3 @@ function formatDate(dateString: string): string {
   })
 }
 </script>
-
-<style scoped>
-.admin {
-  min-height: calc(100vh - 60px);
-  background: #f5f7fa;
-  padding: 2rem 0;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.admin-header {
-  margin-bottom: 2rem;
-}
-
-.admin-header h1 {
-  margin: 0 0 0.5rem 0;
-  color: #2c3e50;
-}
-
-.admin-header p {
-  margin: 0;
-  color: #7f8c8d;
-}
-
-.admin-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.stat-card h3 {
-  margin: 0 0 0.5rem 0;
-  color: #7f8c8d;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-}
-
-.stat-number {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: bold;
-  color: #3498db;
-}
-
-.admin-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.loading,
-.empty-state {
-  text-align: center;
-  padding: 2rem;
-  color: #7f8c8d;
-}
-
-.url-items {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.url-item {
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: box-shadow 0.3s;
-}
-
-.url-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.url-info {
-  flex: 1;
-}
-
-.url-id,
-.url-original,
-.url-short {
-  margin-bottom: 0.5rem;
-}
-
-.url-id strong,
-.url-original strong,
-.url-short strong {
-  display: inline-block;
-  width: 80px;
-  color: #2c3e50;
-}
-
-.url-original a,
-.url-short a {
-  color: #3498db;
-  text-decoration: none;
-  word-break: break-all;
-}
-
-.url-original a:hover,
-.url-short a:hover {
-  text-decoration: underline;
-}
-
-.url-meta {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.875rem;
-  color: #7f8c8d;
-  margin-top: 0.5rem;
-}
-
-.clicks {
-  font-weight: 600;
-  color: #27ae60;
-}
-
-.url-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.3s;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-small {
-  padding: 0.4rem 0.8rem;
-}
-
-.btn-secondary {
-  background: #95a5a6;
-  color: white;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #7f8c8d;
-}
-
-.btn-danger {
-  background: #e74c3c;
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #c0392b;
-}
-
-.pagination {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-}
-
-.page-info {
-  color: #7f8c8d;
-}
-</style>

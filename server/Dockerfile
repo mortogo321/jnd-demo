@@ -1,7 +1,10 @@
 # Multi-stage Dockerfile for Laravel API
 
+# Build argument for environment file
+ARG ENV_FILE=development
+
 # Stage 1: Base PHP image with extensions
-FROM php:8.2-fpm-alpine AS base
+FROM php:8.4-fpm-alpine AS base
 
 # Install system dependencies and PHP extensions
 RUN apk add --no-cache \
@@ -29,16 +32,28 @@ WORKDIR /var/www/html
 FROM base AS development
 
 # Copy application code
-COPY . .
+COPY server/ .
 
-# Install dependencies
-RUN composer install --no-interaction --prefer-dist
+# Copy environment file as .env (after copying all files)
+ARG ENV_FILE
+RUN cp .env.${ENV_FILE} .env
+
+# Set ENV_FILE as environment variable for runtime
+ENV ENV_FILE=${ENV_FILE}
+
+# Install dependencies with force for clean install
+RUN composer install --no-interaction --prefer-dist --no-cache
+
+# Copy entrypoint script
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 9000
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]
 
 # Stage 3: Production
@@ -48,19 +63,32 @@ FROM base AS production
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 # Copy application code
-COPY . .
+COPY server/ .
 
-# Install production dependencies
+# Copy environment file as .env (after copying all files)
+ARG ENV_FILE
+RUN cp .env.${ENV_FILE} .env
+
+# Set ENV_FILE as environment variable for runtime
+ENV ENV_FILE=${ENV_FILE}
+
+# Install all dependencies first (needed for pint)
+RUN composer install --no-interaction --prefer-dist
+
+# Run prebuild (format code, clear caches)
+RUN composer run-script prebuild
+
+# Install production dependencies (removes dev dependencies)
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-# Optimize Laravel
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# Copy entrypoint script
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 9000
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]

@@ -1,14 +1,11 @@
 node_modules
 npm-debug.log
-.env
-.env.*
-!.env.example
+.env.local
+*.env.local
 .git
 .gitignore
 .DS_Store
 *.log
-vendor
-composer.lock
 storage/logs/*
 storage/framework/cache/*
 storage/framework/sessions/*

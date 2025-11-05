@@ -31,7 +31,6 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f5f7fa;
 }
 
 #app {
@@ -42,10 +41,6 @@ body {
 
 main {
   flex: 1;
-}
-
-a {
-  color: #3498db;
 }
 
 button {

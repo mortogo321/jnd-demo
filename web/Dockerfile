@@ -1,12 +1,19 @@
 # Multi-stage Dockerfile for Vue.js Frontend
 
+# Build argument for environment file
+ARG ENV_FILE=development
+
 # Stage 1: Build
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Copy environment file
+ARG ENV_FILE
+COPY web/.env.${ENV_FILE} .env
+
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY web/package.json web/pnpm-lock.yaml* ./
 
 # Install pnpm
 RUN npm install -g pnpm
@@ -15,14 +22,12 @@ RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 
 # Copy application code
-COPY . .
+COPY web/ .
 
-# Build application
-ARG VITE_API_BASE_URL
-ARG VITE_APP_URL
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-ENV VITE_APP_URL=${VITE_APP_URL}
+# Run prebuild (format, lint, type-check)
+RUN pnpm run prebuild
 
+# Build application (env vars will be loaded from .env file)
 RUN pnpm run build
 
 # Stage 2: Production with Nginx
@@ -43,17 +48,24 @@ FROM node:20-alpine AS development
 
 WORKDIR /app
 
-# Install pnpm
+# Install Alpine dependencies for native modules
+RUN apk add --no-cache curl libc6-compat openssl
+
+# Copy environment file
+ARG ENV_FILE
+COPY web/.env.${ENV_FILE} .env
+
+# Install pnpm globally
 RUN npm install -g pnpm
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY web/package.json web/pnpm-lock.yaml* ./
 
-# Install dependencies
-RUN pnpm install
+# Install dependencies with force for clean install
+RUN pnpm install --frozen-lockfile
 
 # Copy application code
-COPY . .
+COPY web/ .
 
 EXPOSE 5173
 

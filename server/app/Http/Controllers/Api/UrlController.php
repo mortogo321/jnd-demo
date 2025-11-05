@@ -19,6 +19,26 @@ class UrlController extends Controller
 
     /**
      * Display a listing of the user's shortened URLs.
+     *
+     * @OA\Get(
+     *     path="/api/urls",
+     *     summary="Get user's shortened URLs",
+     *     tags={"URLs"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of shortened URLs",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 @OA\Property(property="id", type="integer"),
+     *                 @OA\Property(property="original_url", type="string"),
+     *                 @OA\Property(property="short_code", type="string"),
+     *                 @OA\Property(property="url_clicks_count", type="integer")
+     *             )
+     *         )
+     *     )
+     * )
      */
     public function index(Request $request): JsonResponse
     {
@@ -38,6 +58,29 @@ class UrlController extends Controller
 
     /**
      * Store a newly created shortened URL.
+     *
+     * @OA\Post(
+     *     path="/api/urls",
+     *     summary="Create shortened URL",
+     *     tags={"URLs"},
+     *     security={{"sanctum": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"original_url"},
+     *             @OA\Property(property="original_url", type="string", format="url", example="https://example.com/very/long/url")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="URL shortened successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="url", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
      */
     public function store(StoreUrlRequest $request): JsonResponse
     {
@@ -54,6 +97,28 @@ class UrlController extends Controller
 
     /**
      * Display the specified shortened URL with analytics.
+     *
+     * @OA\Get(
+     *     path="/api/urls/{id}",
+     *     summary="Get URL details with analytics",
+     *     tags={"URLs"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="URL details with analytics",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="url", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=404, description="URL not found")
+     * )
      */
     public function show(Request $request, ShortenedUrl $url): JsonResponse
     {
@@ -75,6 +140,28 @@ class UrlController extends Controller
 
     /**
      * Remove the specified shortened URL.
+     *
+     * @OA\Delete(
+     *     path="/api/urls/{id}",
+     *     summary="Delete shortened URL",
+     *     tags={"URLs"},
+     *     security={{"sanctum": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="URL deleted successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Unauthorized"),
+     *     @OA\Response(response=404, description="URL not found")
+     * )
      */
     public function destroy(Request $request, ShortenedUrl $url): JsonResponse
     {
@@ -97,6 +184,23 @@ class UrlController extends Controller
 
     /**
      * Redirect to the original URL and track the click.
+     *
+     * @OA\Get(
+     *     path="/{code}",
+     *     summary="Redirect to original URL",
+     *     tags={"URLs"},
+     *     @OA\Parameter(
+     *         name="code",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=302,
+     *         description="Redirect to original URL"
+     *     ),
+     *     @OA\Response(response=404, description="URL not found")
+     * )
      */
     public function redirect(Request $request, string $code): RedirectResponse|JsonResponse
     {

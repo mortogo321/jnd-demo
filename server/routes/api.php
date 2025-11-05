@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Authenticated routes
-Route::middleware('auth:sanctum')->group(function () {
+// Authenticated routes (session first, then token)
+Route::middleware('auth.session_first')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
 
@@ -24,6 +24,3 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/urls/{url}', [AdminController::class, 'destroy']);
     });
 });
-
-// Public redirect route (outside API to avoid /api prefix)
-Route::get('/{code}', [UrlController::class, 'redirect'])->name('url.redirect');

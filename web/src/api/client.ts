@@ -13,7 +13,9 @@ class ApiClient {
         'Content-Type': 'application/json',
         Accept: 'application/json'
       },
-      withCredentials: true
+      withCredentials: true,
+      xsrfCookieName: 'XSRF-TOKEN',
+      xsrfHeaderName: 'X-XSRF-TOKEN'
     })
 
     this.setupInterceptors()
@@ -23,13 +25,20 @@ class ApiClient {
    * Setup request and response interceptors
    */
   private setupInterceptors(): void {
-    // Request interceptor - add auth token
+    // Request interceptor - fetch CSRF token and add auth token
     this.client.interceptors.request.use(
-      (config) => {
+      async (config) => {
+        // Fetch CSRF token before state-changing requests
+        if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {
+          await this.fetchCsrfToken()
+        }
+
+        // Add Bearer token if available
         const token = localStorage.getItem('auth_token')
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
         }
+
         return config
       },
       (error) => Promise.reject(error)
@@ -43,6 +52,10 @@ class ApiClient {
           // Clear auth state on unauthorized
           localStorage.removeItem('auth_token')
           window.location.href = '/login'
+        }
+        // Reset CSRF flag on 419 (CSRF token mismatch) to refetch on next request
+        if (error.response?.status === 419) {
+          this.csrfTokenFetched = false
         }
         return Promise.reject(error)
       }
